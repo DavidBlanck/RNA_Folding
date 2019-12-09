@@ -1,7 +1,20 @@
 test_seq = 'gaggaaaguccgggcUAGCACACACCUUAUGGGUGUGUAGUGUUUGUGCUAAGGGAAAUCAUAACCUUAGGUAUGUUGUAUAAACAUAACGGCAAACUAGUUAUAGCUAAGGUGUUUCACUACGUUAUAACUUAAAUUAAAGUGCCACAGAGACGAAUCUAUUUAGAAAUAAAUAGAGUGAAACGCGGUAAACCCCUCAAGCUAGCAACCCAAAUUAGGUAGGGGCACAUGAUGUGUAGCAAUACAACAUCAUGCAAGAUUUGAAUCUUGAGAUUAAUAGUCACAAAAGAAGAAAUUCUUUacagaacgcggcuua'
-test_seq = test_seq.upper()
+
+
+"""
+This function evaluates an RNA sequence string of nucleotide encodings (A, U, G, or C) and returns a dynamic programming
+table and a trace back table storing the results of the evaluation. The last element in the first nested array of the 
+score table stores the optimal number of pairings. The trace back table can be used to find the pairings.
+
+Parameters - The RNA sequence to be evaluated
+
+Returns - Score table and trace table in that order. Both are nested arrays. The score table can be used to find the
+optimal score of the evaluation. The trace table can be used to determine the pairs in the optimal alignment.
+"""
+
 
 def evaluate_seq(seq):
+    seq = seq.upper();
     score_table = []
     for s in range(len(seq)):
         score_table.append([0] * len(seq))
@@ -38,30 +51,38 @@ def evaluate_seq(seq):
 
     return score_table, trace_table
 
-def traceback(final_pos):
-    nodes = [final_pos]
+
+"""
+Evaluates a trace table to determine the pairings in an optimal RNA alignment
+Parameters -
+    trace_table - a nested array storing pointers to the previous node or nodes that each node was derived from.
+Returns - 
+    A list of the positions for each pairing in the optimal alignment
+"""
+
+
+def traceback(trace_table):
+    nodes = [trace_table[0][-1]]
     pairs = []
     while len(nodes) > 0:
         temp = nodes.pop()
         if temp == 0:
             pass
         elif len(temp) == 2:
-            nodes.append(tt[temp[0]][temp[1]])
+            nodes.append(trace_table[temp[0]][temp[1]])
         elif len(temp) == 3:
             pairs.append((temp[0] - 1, temp[0] + temp[1] + 1))
-            nodes.append(tt[temp[0]][temp[1]])
+            nodes.append(trace_table[temp[0]][temp[1]])
         else:
             pairs.append((temp[2] - 1, temp[3] + temp[2] + 1))
-            nodes.append(tt[temp[0]][temp[1]])
-            nodes.append(tt[temp[2]][temp[3]])
+            nodes.append(trace_table[temp[0]][temp[1]])
+            nodes.append(trace_table[temp[2]][temp[3]])
     return pairs
 
 
 st, tt = evaluate_seq(test_seq)
 
-temp = tt[0][-1]
-
-pairs = traceback(tt[0][-1])
+pairs = traceback(tt)
 
 dot_paren = "." * len(test_seq)
 for pair in pairs:

@@ -52,6 +52,49 @@ def evaluate_seq(seq):
     return score_table, trace_table
 
 
+def evaluate_seq_weighted(seq):
+    seq = seq.upper();
+    score_table = []
+    for s in range(len(seq)):
+        score_table.append([0] * len(seq))
+
+    trace_table = []
+    for s in range(len(seq)):
+        trace_table.append([0] * len(seq))
+
+    for k in range(5, len(seq)):
+        for i in range(0, len(seq) - k):
+            j = i + k
+            opt = 0
+            for t in range(i, j - 4):
+                if (seq[j] == 'A' and seq[t] == 'U'
+                        or seq[j] == 'U' and seq[t] == 'A'
+                        or seq[j] == 'C' and seq[t] == 'G'
+                        or seq[j] == 'G' and seq[t] == 'C'):
+                    if seq[j] == 'C' or seq[j] == 'G':
+                        bonus = 5.53
+                    else:
+                        bonus = 4.42
+                    if i == t:
+                        temp = bonus + score_table[t + 1][k - 2]
+                    else:
+                        temp = bonus + score_table[i][t - i - 1] + score_table[t + 1][j - t - 2]
+
+                    if temp > opt:
+                        opt = temp
+                        optt = t
+            if score_table[i][k - 1] >= opt:
+                score_table[i][k] = score_table[i][k - 1]
+                trace_table[i][k] = (i, k - 1)
+            elif optt == i:
+                score_table[i][k] = opt
+                trace_table[i][k] = (i + 1, k - 2, 'p')
+            else:
+                score_table[i][k] = opt
+                trace_table[i][k] = (i, optt - 1 - i, optt + 1, j - optt - 2)
+
+    return score_table, trace_table
+
 """
 Evaluates a trace table to determine the pairings in an optimal RNA alignment
 Parameters -
@@ -80,13 +123,31 @@ def traceback(trace_table):
     return pairs
 
 
+
+def dotparen(pairs, length):
+    dot_paren = "." * length
+    for pair in pairs:
+        dot_paren = dot_paren[:pair[0]] + '(' + dot_paren[pair[0] + 1:]
+        dot_paren = dot_paren[:pair[1]] + ')' + dot_paren[pair[1] + 1:]
+    return dot_paren
+
+
 st, tt = evaluate_seq(test_seq)
+
+print(st[0][-1])
 
 pairs = traceback(tt)
 
-dot_paren = "." * len(test_seq)
-for pair in pairs:
-    dot_paren = dot_paren[:pair[0]] + '(' + dot_paren[pair[0] + 1:]
-    dot_paren = dot_paren[:pair[1]] + ')' + dot_paren[pair[1] + 1:]
+dp = dotparen(pairs, len(test_seq))
 
-print(dot_paren)
+print(dp)
+
+st, tt = evaluate_seq_weighted(test_seq)
+
+print(st[0][-1])
+
+pairs = traceback(tt)
+
+dp = dotparen(pairs, len(test_seq))
+
+print(dp)

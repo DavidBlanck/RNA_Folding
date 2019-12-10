@@ -1,6 +1,3 @@
-test_seq = 'gaggaaaguccgggcUAGCACACACCUUAUGGGUGUGUAGUGUUUGUGCUAAGGGAAAUCAUAACCUUAGGUAUGUUGUAUAAACAUAACGGCAAACUAGUUAUAGCUAAGGUGUUUCACUACGUUAUAACUUAAAUUAAAGUGCCACAGAGACGAAUCUAUUUAGAAAUAAAUAGAGUGAAACGCGGUAAACCCCUCAAGCUAGCAACCCAAAUUAGGUAGGGGCACAUGAUGUGUAGCAAUACAACAUCAUGCAAGAUUUGAAUCUUGAGAUUAAUAGUCACAAAAGAAGAAAUUCUUUacagaacgcggcuua'
-
-
 """
 This function evaluates an RNA sequence string of nucleotide encodings (A, U, G, or C) and returns a dynamic programming
 table and a trace back table storing the results of the evaluation. The last element in the first nested array of the 
@@ -13,45 +10,6 @@ optimal score of the evaluation. The trace table can be used to determine the pa
 """
 
 
-def evaluate_seq(seq):
-    seq = seq.upper();
-    score_table = []
-    for s in range(len(seq)):
-        score_table.append([0] * len(seq))
-
-    trace_table = []
-    for s in range(len(seq)):
-        trace_table.append([0] * len(seq))
-
-    for k in range(5, len(seq)):
-        for i in range(0, len(seq) - k):
-            j = i + k
-            opt = 0
-            for t in range(i, j - 4):
-                if (seq[j] == 'A' and seq[t] == 'U'
-                        or seq[j] == 'U' and seq[t] == 'A'
-                        or seq[j] == 'C' and seq[t] == 'G'
-                        or seq[j] == 'G' and seq[t] == 'C'):
-                    if i == t:
-                        temp = 1 + score_table[t + 1][k - 2]
-                    else:
-                        temp = 1 + score_table[i][t - i - 1] + score_table[t + 1][j - t - 2]
-                    if temp > opt:
-                        opt = temp
-                        optt = t
-            if score_table[i][k - 1] >= opt:
-                score_table[i][k] = score_table[i][k - 1]
-                trace_table[i][k] = (i, k - 1)
-            elif optt == i:
-                score_table[i][k] = opt
-                trace_table[i][k] = (i + 1, k - 2, 'p')
-            else:
-                score_table[i][k] = opt
-                trace_table[i][k] = (i, optt - 1 - i, optt + 1, j - optt - 2)
-
-    return score_table, trace_table
-
-
 def evaluate_seq_weighted(seq):
     seq = seq.upper();
     score_table = []
@@ -62,10 +20,14 @@ def evaluate_seq_weighted(seq):
     for s in range(len(seq)):
         trace_table.append([0] * len(seq))
 
+    # Iterate through range of distances between the two indices
     for k in range(5, len(seq)):
+        # Iterate through range of starting positions for the first index value
         for i in range(0, len(seq) - k):
             j = i + k
             opt = 0
+            # Now we consider every case. Either j forms a bond with any of the nucleotides
+            # between i and j or j does not bond.
             for t in range(i, j - 4):
                 if (seq[j] == 'A' and seq[t] == 'U'
                         or seq[j] == 'U' and seq[t] == 'A'
@@ -79,10 +41,11 @@ def evaluate_seq_weighted(seq):
                         temp = bonus + score_table[t + 1][k - 2]
                     else:
                         temp = bonus + score_table[i][t - i - 1] + score_table[t + 1][j - t - 2]
-
                     if temp > opt:
                         opt = temp
                         optt = t
+            # If the score at i, k - 1 is greater than the optimal binding score, then j does not bond. Otherwise,
+            # j is bonded to an intermediate position.
             if score_table[i][k - 1] >= opt:
                 score_table[i][k] = score_table[i][k - 1]
                 trace_table[i][k] = (i, k - 1)
@@ -94,6 +57,7 @@ def evaluate_seq_weighted(seq):
                 trace_table[i][k] = (i, optt - 1 - i, optt + 1, j - optt - 2)
 
     return score_table, trace_table
+
 
 """
 Evaluates a trace table to determine the pairings in an optimal RNA alignment
@@ -132,22 +96,49 @@ def dotparen(pairs, length):
     return dot_paren
 
 
-st, tt = evaluate_seq(test_seq)
 
-print(st[0][-1])
+def topairs(dotparen):
+    opening = []
+    pairs = []
+    for i in range(len(dotparen)):
+        if dotparen[i] == '(':
+            opening.append(i)
+        elif dotparen[i] == ')' and len(pairs) > 0:
+            pairs.append((opening.pop(), i))
+        elif dotparen[i] == '>' or dotparen[i] == '}':
+            pairs.append('x')
+    return pairs
 
-pairs = traceback(tt)
 
-dp = dotparen(pairs, len(test_seq))
+def findcommon(l1, l2):
+    s2 = set()
+    common = 0
+    for e in l2:
+        s2.add(e)
+    for e in l1:
+        if (e in s2):
+            common += 1
+    return common
 
-print(dp)
 
-st, tt = evaluate_seq_weighted(test_seq)
 
-print(st[0][-1])
+test_seq = 'UUUUAUGGAGAGUUUGAUCCUGGCUCAGGAUGAACGCUGGCGGCGUGCCUAAUACAUGCAAGUCGAGCGAACGGACGAGAAGCUUGCUUCUCUGAUGUUAGCGGCGGACGGGUGAGUAACACGUGGAUAACCUACCUAUAAGACUGGGAUAACUUCGGGAAACCGGAGCUAAUACCGGAUAAUAUUUUGAACCGCAUGGUUCAAAAGUGAAAGACGGUCUUGCUGUCACUUAUAGAUGGAUCCGCGCUGCAUUAGCUAGUUGGUAAGGUAACGGCUUACCAAGGCAACGAUGCAUAGCCGACCUGAGAGGGUGAUCGGCCACACUGGAACUGAGACACGGUCCAGACUCCUACGGGAGGCAGCAGUAGGGAAUCUUCCGCAAUGGGCGAAAGCCUGACGGAGCAACGCCGCGUGAGUGAUGAAGGUCUUCGGAUCGUAAAACUCUGUUAUUAGGGAAGAACAUAUGUGUAAGUAACUGUGCACAUCUUGACGGUACCUAAUCAGAAAGCCACGGCUAACUACGUGCCAGCAGCCGCGGUAAUACGUAGGUGGCAAGCGUUAUCCGGAAUUAUUGGGCGUAAAGCGCGCGUAGGCGGUUUUUUAAGUCUGAUGUGAAAGCCCACGGCUCAACCGUGGAGGGUCAUUGGAAACUGGAAAACUUGAGUGCAGAAGAGGAAAGUGGAAUUCCAUGUGUAGCGGUGAAAUGCGCAGAGAUAUGGAGGAACACCAGUGGCGAAGGCGACUUUCUGGUCUGUAACUGACGCUGAUGUGCGAAAGCGUGGGGAUCAAACAGGAUUAGAUACCCUGGUAGUCCACGCCGUAAACGAUGAGUGCUAAGUGUUAGGGGGUUUCCGCCCCUUAGUGCUGCAGCUAACGCAUUAAGCACUCCGCCUGGGGAGUACGACCGCAAGGUUGAAACUCAAAGGAAUUGACGGGGACCCGCACAAGCGGUGGAGCAUGUGGUUUAAUUCGAAGCAACGCGAAGAACCUUACCAAAUCUUGACAUCCUUUGACAACUCUAGAGAUAGAGCCUUCCCCUUCGGGGGACAAAGUGACAGGUGGUGCAUGGUUGUCGUCAGCUCGUGUCGUGAGAUGUUGGGUUAAGUCCCGCAACGAGCGCAACCCUUAAGCUUAGUUGCCAUCAUUAAGUUGGGCACUCUAAGUUGACUGCCGGUGACAAACCGGAGGAAGGUGGGGAUGACAUCAAAUCAUCAUGCCCCUUAUGAUUUGGGCUACACACGUGCUACAAUGGACAAUACAAAGGGCAGCGAAACCGCGAGGUCAAGCAAAUCCCAUAAAGUUGUUCUCAGUUCGGAUUGUAGUCUGCAACUCGACUACAUGAAGCUGGAAUCGCUAGUAAUCGUAGAUCAGCAUGCUACGGUGAAUACGUUCCCGGGUCUUGUACACACCGCCCGUCACACCACGAGAGUUUGUAACACCCGAAGCCGGUGGAGUAACCUUUUAGGAGCCAGCCGUCGAAGGUGGGACAAAUGAUUGGGGUGAAGUCGUAACAAGGUAGCCGUAUCGGAAGGUGCGGCUGGAUCACCUCCUUUCU'
+biostruct = '.........(((((...<<<.))))).((((.(((((.(((((((((....(((.(((..(((..((((((....((((((....))))))....)))))))))......(((......((((((((..((...(((((((.((((....(((((((....))))))).....))))......(((((((((....)))))))))......((((((...)))))).)))))))..))))))))))(((..(.(((..((((((((.......))))))))))).....))))..((((((((....))))...))))))).((((((..........)))))).((((....))))...)))))).).....(.(((...(((((....))))).)))).)).))))))..((((......((((....)))).....)))).(..((((((...(.....((((((((......)))))))).....)....))))))..)...((((([[[...(((((.....((.]]])).......)))))))))).))))))))))..........((({{.....((((.(.(((.(((((((.(((((((((((....(((((((.....)))))))..)))))))))..)))))))))...(((((((((..(((((((((..((((((((...(((......)))......))))))))..))....(..((....)))))))))).)))))).)))...))))..))))....((((((...((...((((.........))))...))))))))..........((((((..(((((((((((((....)))))))))))))...((..}})).....)))))).))).(((......((((....))))....)))...>>>..(((((.(((((((.((..(((((((((((((((((....((((........))))........(((((((.....((((((((..(((((((....)))))))..((((....)))).))))).))).((.((((..(((((((((...(((((((((....)))..((((......))))..)))))).....((((.(((((((...((..((......))))....)))))))..((((((((.....)))))))).....))))....)))).)))...))))))))....)))))))...)).))))))))))...(((((((.....(((..((...(((....)))...))....))).....)))))))......(...((((((((........))))))))...).....))))).....((((((((.......))))))))......))...)))))))))).))....((.((...((((((((..((((((((((((....((((((..(((..(((...))).))).))))))...))))))))))))..))))))))....))..))....((((((((((....))))))))))...............'
 
-pairs = traceback(tt)
+st1, tt1 = evaluate_seq_weighted(test_seq)
 
-dp = dotparen(pairs, len(test_seq))
+ps1 = traceback(tt1)
 
-print(dp)
+#print(ps1)
+
+print(dotparen(ps1, len(test_seq)))
+
+ps2 = topairs(biostruct)
+
+#print(ps2)
+
+#print(biostruct)
+
+print(findcommon(ps1, ps2))
+#print(len(ps1))
+print(len(ps2))
